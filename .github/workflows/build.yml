@@ -40,7 +40,7 @@ jobs:
         run: |
           NAME="${{ github.event.inputs.frida_name }}"
           if [ -z "$NAME" ]; then
-            NAME=$(cat /dev/urandom | LC_ALL=C tr -dc 'a-z' | fold -w 5 | head -n 1)
+            NAME=$(head -c 100 /dev/urandom | LC_ALL=C tr -dc 'a-z' | head -c 5)
             echo "Generated random name: $NAME"
           fi
           echo "name=$NAME" >> $GITHUB_OUTPUT

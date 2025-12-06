@@ -43,7 +43,7 @@ usage() {
 
 # Generate random 5-letter name
 generate_random_name() {
-    cat /dev/urandom | LC_ALL=C tr -dc 'a-z' | fold -w 5 | head -n 1
+    head -c 100 /dev/urandom | LC_ALL=C tr -dc 'a-z' | head -c 5
 }
 
 # Get latest Frida version from GitHub
