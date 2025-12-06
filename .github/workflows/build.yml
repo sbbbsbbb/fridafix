@@ -19,6 +19,9 @@ on:
         default: '8899'
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -72,6 +75,7 @@ jobs:
 
       - name: Create Release (optional)
         if: github.event.inputs.frida_version != 'latest'
+        continue-on-error: true
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.version }}-${{ steps.name.outputs.name }}
