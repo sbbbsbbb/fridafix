@@ -1,0 +1,6 @@
+#!/bin/bash
+launchcfg={{LAUNCH_DAEMON_PATH}}/re.{{FRIDA_NAME}}.server.plist
+if [ -f "$launchcfg" ]; then
+    launchctl unload "$launchcfg"
+fi
+exit 0

@@ -1,0 +1,8 @@
+Package: re.{{FRIDA_NAME}}.server
+Name: {{FRIDA_NAME}}-server
+Version: {{VERSION}}
+Architecture: {{ARCH}}
+Description: Patched frida-server for iOS
+Maintainer: Frida Developers <oleavr@frida.re>
+Author: Frida Developers <oleavr@frida.re>
+Section: Development

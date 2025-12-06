@@ -1,0 +1,110 @@
+name: Build Frida iOS deb
+
+on:
+  workflow_dispatch:
+    inputs:
+      frida_version:
+        description: 'Frida version (e.g., 16.5.2 or "latest")'
+        required: true
+        default: 'latest'
+        type: string
+      frida_name:
+        description: 'Custom name (5 lowercase letters, leave empty for random)'
+        required: false
+        default: ''
+        type: string
+      frida_port:
+        description: 'Server port'
+        required: false
+        default: '8899'
+        type: string
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install dpkg
+        run: brew install dpkg
+
+      - name: Generate random name if not provided
+        id: name
+        run: |
+          NAME="${{ github.event.inputs.frida_name }}"
+          if [ -z "$NAME" ]; then
+            NAME=$(cat /dev/urandom | LC_ALL=C tr -dc 'a-z' | fold -w 5 | head -n 1)
+            echo "Generated random name: $NAME"
+          fi
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Get Frida version
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.frida_version }}"
+          if [ "$VERSION" = "latest" ]; then
+            VERSION=$(curl -s "https://api.github.com/repos/frida/frida/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+            echo "Latest version: $VERSION"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build patched deb packages
+        run: |
+          chmod +x scripts/build-deb.sh
+          ./scripts/build-deb.sh \
+            -v "${{ steps.version.outputs.version }}" \
+            -n "${{ steps.name.outputs.name }}" \
+            -p "${{ github.event.inputs.frida_port }}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frida-ios-${{ steps.name.outputs.name }}-${{ steps.version.outputs.version }}
+          path: dist/*.deb
+          retention-days: 30
+
+      - name: Create Release (optional)
+        if: github.event.inputs.frida_version != 'latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}-${{ steps.name.outputs.name }}
+          name: Frida ${{ steps.version.outputs.version }} (${{ steps.name.outputs.name }})
+          body: |
+            ## Patched Frida iOS deb packages
+
+            - **Version**: ${{ steps.version.outputs.version }}
+            - **Name**: ${{ steps.name.outputs.name }}
+            - **Port**: ${{ github.event.inputs.frida_port }}
+
+            ### Installation
+
+            ```bash
+            # Transfer to device
+            scp dist/*.deb root@<device-ip>:/var/root/
+
+            # Install on device
+            ssh root@<device-ip>
+            dpkg -i /var/root/*.deb
+            ```
+
+            ### Usage
+
+            ```bash
+            # Connect via network
+            frida -H <device-ip>:${{ github.event.inputs.frida_port }} -f <app>
+
+            # Or via USB
+            frida -U -f <app>
+            ```
+          files: dist/*.deb
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
